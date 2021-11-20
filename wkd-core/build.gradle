@@ -9,6 +9,11 @@ dependencies {
     implementation(project(":wkd-api"))
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:${kotlinVersion}"
+    implementation "io.micronaut:micronaut-inject:3.1.4"
+    implementation("org.jsoup:jsoup:1.14.3")
+    implementation(platform("com.squareup.okhttp3:okhttp-bom:4.9.2"))
+    implementation("com.squareup.okhttp3:okhttp")
+    kapt "io.micronaut:micronaut-inject-java:3.1.4"
 }
 
 java {
