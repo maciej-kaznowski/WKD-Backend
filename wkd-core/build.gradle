@@ -6,6 +6,8 @@ plugins {
 def kotlinVersion = project.properties.get("kotlinVersion")
 
 dependencies {
+    implementation(project(":wkd-api"))
+
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:${kotlinVersion}"
 }
 
