@@ -31,6 +31,7 @@ dependencies {
     runtimeOnly("ch.qos.logback:logback-classic")
     implementation("io.micronaut:micronaut-validation")
     runtimeOnly("com.fasterxml.jackson.module:jackson-module-kotlin")
+    testImplementation("org.jsoup:jsoup:1.14.3")
 }
 
 

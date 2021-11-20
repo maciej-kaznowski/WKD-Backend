@@ -4,7 +4,7 @@ import arrow.core.Either
 import org.jsoup.nodes.Document
 import java.time.Instant
 
-internal interface WkdResponseParser {
+interface WkdResponseParser {
 
     fun parseJourneySearchResponse(
         time: Instant,
@@ -13,10 +13,12 @@ internal interface WkdResponseParser {
 
 }
 
-internal sealed class JourneyResponseParseError {
+sealed class JourneyResponseParseError {
 
     data class MalformedDocument(val message: String) : JourneyResponseParseError()
-    data class IncorrectFormat(val value: String, val message: String, val cause: Throwable) : JourneyResponseParseError()
+    data class IncorrectFormat(val value: String, val message: String, val cause: Throwable) :
+        JourneyResponseParseError()
+
     data class Unknown(val message: String, val cause: Throwable) : JourneyResponseParseError()
 
 }

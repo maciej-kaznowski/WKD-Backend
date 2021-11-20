@@ -17,7 +17,7 @@ import java.time.ZonedDateTime
 import java.time.temporal.ChronoField
 
 @Singleton
-internal class WkdResponseParserImpl : WkdResponseParser {
+class WkdResponseParserImpl : WkdResponseParser {
 
     override fun parseJourneySearchResponse(
         time: Instant,
