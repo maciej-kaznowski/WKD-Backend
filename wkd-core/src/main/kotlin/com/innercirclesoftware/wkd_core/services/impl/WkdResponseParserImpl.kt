@@ -27,7 +27,10 @@ internal class WkdResponseParserImpl : WkdResponseParser {
             .mapLeft { throwable ->
                 when (throwable) {
                     is NullPointerException -> JourneyResponseParseError.MalformedDocument(""""train" class not found""")
-                    else -> JourneyResponseParseError.Unknown("""Unknown error getting elements by class "train"""", throwable)
+                    else -> JourneyResponseParseError.Unknown(
+                        """Unknown error getting elements by class "train"""",
+                        throwable
+                    )
                 }
             }
             .flatMap { trains: Elements ->
