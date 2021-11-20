@@ -2,6 +2,7 @@ package com.innercirclesoftware.wkd_server.controllers
 
 import com.innercirclesoftware.wkd_api.models.Journey
 import com.innercirclesoftware.wkd_core.services.JourneyService
+import com.innercirclesoftware.wkd_core.services.WkdScrapeError
 import io.micronaut.http.MediaType
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
@@ -23,5 +24,8 @@ class JourneyController @Inject constructor(
         time = time ?: Instant.now(),
         fromStationId = fromStationId,
         toStationId = toStationId,
+    ).fold(
+        ifLeft = { error: WkdScrapeError -> throw IllegalStateException("Error parsing response: $error") },
+        ifRight = { it }
     )
 }

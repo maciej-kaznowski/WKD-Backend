@@ -1,5 +1,6 @@
 package com.innercirclesoftware.wkd_core.services
 
+import arrow.core.Either
 import com.innercirclesoftware.wkd_api.models.Journey
 import java.time.Instant
 
@@ -9,6 +10,13 @@ interface JourneyService {
         time: Instant,
         fromStationId: Long,
         toStationId: Long
-    ): List<Journey>
+    ): Either<WkdScrapeError, List<Journey>>
+
+}
+
+sealed class WkdScrapeError {
+
+    data class HttpError(val message: String, val cause: Throwable?) : WkdScrapeError()
+    data class ResponseParseError(val message: String) : WkdScrapeError()
 
 }

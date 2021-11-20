@@ -1,88 +1,95 @@
 package com.innercirclesoftware.wkd_core.services.impl
 
+import arrow.core.Either
+import arrow.core.filterOrOther
+import arrow.core.flatMap
+import arrow.core.rightIfNotNull
 import com.innercirclesoftware.wkd_api.models.Journey
 import com.innercirclesoftware.wkd_api.models.JourneyStation
+import com.innercirclesoftware.wkd_core.Wkd
 import com.innercirclesoftware.wkd_core.services.JourneyService
+import com.innercirclesoftware.wkd_core.services.WkdResponseParser
+import com.innercirclesoftware.wkd_core.services.WkdScrapeError
+import com.innercirclesoftware.wkd_core.utils.Jsoup
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
-import okhttp3.FormBody
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody
-import org.jsoup.Jsoup
-import org.jsoup.select.Elements
+import okhttp3.*
 import java.nio.charset.StandardCharsets
 import java.time.Instant
-import java.time.ZoneId
 import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoField
 
-private val WARSAW_TIMEZONE = ZoneId.of("Europe/Warsaw")
 
 @Singleton
-class JourneyServiceImpl @Inject constructor(
+class JourneyServiceImpl @Inject internal constructor(
     private val okHttpClient: OkHttpClient,
+    private val wkdResponseParser: WkdResponseParser,
 ) : JourneyService {
 
     override fun searchJourneys(
         time: Instant,
         fromStationId: Long,
         toStationId: Long,
-    ): List<Journey> {
+    ): Either<WkdScrapeError, List<Journey>> {
         val request = buildSearchRequest(time = time, fromStationId = fromStationId, toStationId = toStationId)
-        val response = okHttpClient.newCall(request).execute()
-        return response.body!!.use { body ->
-            val parsedResponse = Jsoup.parse(body.byteStream(), StandardCharsets.UTF_8.name(), request.url.toString())
-            val trains: Elements = parsedResponse.getElementsByClass("train")
 
-            trains.map { trainElement ->
-                val trainTimes = trainElement.select(".train-time")
-                require(trainTimes.size == 2) { trainTimes.size }
-                val (startTrainTimeElement, endTrainTimeElement) = trainTimes.map { it.text() }
-                val timePattern = DateTimeFormatter.ofPattern("HH:mm")
-                val startTimeTemporal = timePattern.parse(startTrainTimeElement)
-                val endTimeTemporal = timePattern.parse(endTrainTimeElement)
-                val startTime = instantWithLocalTime(
-                    time,
-                    hour = startTimeTemporal.get(ChronoField.HOUR_OF_DAY),
-                    minute = startTimeTemporal.get(ChronoField.MINUTE_OF_HOUR)
-                )
-                val endTime = instantWithLocalTime(
-                    time,
-                    hour = endTimeTemporal.get(ChronoField.HOUR_OF_DAY),
-                    minute = endTimeTemporal.get(ChronoField.MINUTE_OF_HOUR)
-                )
-                val startStation = JourneyStation(
-                    time = startTime,
-                    stationId = fromStationId,
-                )
-                val endStation = JourneyStation(
-                    time = endTime,
-                    stationId = toStationId,
-                )
-
-                Journey(start = startStation, end = endStation)
+        return Either
+            .Right(okHttpClient.newCall(request))
+            .flatMap { call ->
+                Either
+                    .catch { call.execute() }
+                    .mapLeft { throwable -> WkdScrapeError.HttpError("Error executing request", throwable) }
+                    .filterOrOther(Response::isSuccessful) { response ->
+                        WkdScrapeError.HttpError(
+                            "Response not successful: $response",
+                            null
+                        )
+                    }
             }
-        }
-    }
+            .flatMap { response ->
+                response.body.rightIfNotNull<WkdScrapeError, ResponseBody> {
+                    WkdScrapeError.HttpError("No body", null)
+                }
+            }
+            .flatMap { body ->
+                Either
+                    .catch { body.use { Jsoup.requireParse(it.byteStream(), StandardCharsets.UTF_8, request.url) } }
+                    .mapLeft<WkdScrapeError> { throwable: Throwable ->
+                        return@mapLeft WkdScrapeError.HttpError("Problem parsing body with jsoup", cause = throwable)
+                    }
+            }
+            .flatMap { document ->
+                wkdResponseParser
+                    .parseJourneySearchResponse(time, document)
+                    .mapLeft { journeyResponseParseError ->
+                        WkdScrapeError.ResponseParseError(
+                            message = "Error parsing document response for time=$time, fromStationId=$fromStationId, toStationId=$toStationId: error=$journeyResponseParseError",
+                        )
+                    }
+            }
+            .map { journeyTimes ->
+                journeyTimes.map { (startTime, endTime) ->
+                    val startStation = JourneyStation(
+                        time = startTime,
+                        stationId = fromStationId,
+                    )
+                    val endStation = JourneyStation(
+                        time = endTime,
+                        stationId = toStationId,
+                    )
 
-    private fun instantWithLocalTime(time: Instant, hour: Int, minute: Int): Instant {
-        return ZonedDateTime.ofInstant(time, WARSAW_TIMEZONE)
-            .withHour(hour)
-            .withMinute(minute)
-            .toInstant()
+                    Journey(start = startStation, end = endStation)
+                }
+            }
     }
-
 
     private fun buildSearchRequest(
         time: Instant,
         fromStationId: Long,
         toStationId: Long
     ): Request {
-        val localTime = ZonedDateTime.ofInstant(time, WARSAW_TIMEZONE)
-        val timetableDate = DateTimeFormatter.ISO_LOCAL_DATE.format(localTime)
-        val timetableTime = DateTimeFormatter.ofPattern("HH:mm").format(localTime)
+        val localTime = ZonedDateTime.ofInstant(time, Wkd.TIMEZONE)
+        val timetableDate = Wkd.DATE_PATTERN.format(localTime)
+        val timetableTime = Wkd.TIME_PATTERN.format(localTime)
         val requestBody: RequestBody = FormBody.Builder(StandardCharsets.UTF_8)
             .addEncoded("timetable_date", timetableDate)
             .addEncoded("timetable_time", timetableTime)
