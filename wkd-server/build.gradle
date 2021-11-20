@@ -6,13 +6,7 @@ plugins {
     id("io.micronaut.application") version "2.0.8"
 }
 
-version = "0.1"
-group = "com.innercirclesoftware"
-
-val kotlinVersion = project.properties.get("kotlinVersion")
-repositories {
-    mavenCentral()
-}
+def kotlinVersion = project.properties.get("kotlinVersion")
 
 micronaut {
     runtime("netty")
@@ -33,9 +27,7 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:${kotlinVersion}")
     runtimeOnly("ch.qos.logback:logback-classic")
     implementation("io.micronaut:micronaut-validation")
-
     runtimeOnly("com.fasterxml.jackson.module:jackson-module-kotlin")
-
 }
 
 

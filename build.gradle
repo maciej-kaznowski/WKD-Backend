@@ -1,0 +1,13 @@
+version = '0.0.1-SNAPSHOT'
+group = "com.innercirclesoftware"
+
+allprojects {
+    repositories {
+        mavenCentral()
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
+

@@ -1,0 +1,4 @@
+rootProject.name = "wkd-backend"
+include 'wkd-server'
+include 'wkd-api'
+include 'wkd-core'
