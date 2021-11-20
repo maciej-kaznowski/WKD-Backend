@@ -1,4 +1,4 @@
-package com.innercirclesoftware
+package com.innercirclesoftware.wkd_server
 
 import io.micronaut.runtime.Micronaut.*
 

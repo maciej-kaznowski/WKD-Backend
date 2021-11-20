@@ -35,7 +35,7 @@ dependencies {
 
 
 application {
-    mainClass.set("com.innercirclesoftware.ApplicationKt")
+    mainClass.set("com.innercirclesoftware.wkd_server.ApplicationKt")
 }
 java {
     sourceCompatibility = JavaVersion.toVersion("11")
