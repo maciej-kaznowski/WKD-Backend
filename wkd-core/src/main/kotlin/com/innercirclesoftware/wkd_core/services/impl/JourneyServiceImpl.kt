@@ -5,7 +5,6 @@ import arrow.core.filterOrOther
 import arrow.core.flatMap
 import arrow.core.rightIfNotNull
 import com.innercirclesoftware.wkd_api.models.Journey
-import com.innercirclesoftware.wkd_api.models.JourneyStation
 import com.innercirclesoftware.wkd_api.models.Station
 import com.innercirclesoftware.wkd_core.Wkd
 import com.innercirclesoftware.wkd_core.models.stationId
@@ -19,7 +18,10 @@ import okhttp3.*
 import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 
+private val SEARCH_TIME_PATTERN: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+private val SEARCH_DATE_PATTERN: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE
 
 @Singleton
 class JourneyServiceImpl @Inject internal constructor(
@@ -41,10 +43,7 @@ class JourneyServiceImpl @Inject internal constructor(
                     .catch { call.execute() }
                     .mapLeft { throwable -> WkdScrapeError.HttpError("Error executing request", throwable) }
                     .filterOrOther(Response::isSuccessful) { response ->
-                        WkdScrapeError.HttpError(
-                            "Response not successful: $response",
-                            null
-                        )
+                        WkdScrapeError.HttpError("Response not successful: $response", null)
                     }
             }
             .flatMap { response ->
@@ -55,26 +54,21 @@ class JourneyServiceImpl @Inject internal constructor(
             .flatMap { body ->
                 Either
                     .catch { body.use { Jsoup.requireParse(it.byteStream(), StandardCharsets.UTF_8, request.url) } }
-                    .mapLeft<WkdScrapeError> { throwable: Throwable ->
-                        return@mapLeft WkdScrapeError.HttpError("Problem parsing body with jsoup", cause = throwable)
+                    .mapLeft<WkdScrapeError> { throwable ->
+                        WkdScrapeError.HttpError("Problem parsing body with jsoup", throwable)
                     }
             }
             .flatMap { document ->
                 wkdResponseParser
-                    .parseJourneySearchResponse(time, document)
+                    .parseJourneySearchResponse(document)
                     .mapLeft { journeyResponseParseError ->
                         WkdScrapeError.ResponseParseError(
                             message = "Error parsing document response for time=$time, fromStation=$fromStation, toStation=$toStation: error=$journeyResponseParseError",
                         )
                     }
             }
-            .map { journeyTimes ->
-                journeyTimes.map { (startTime, endTime) ->
-                    Journey(
-                        start = JourneyStation(time = startTime, station = fromStation),
-                        end = JourneyStation(time = endTime, station = toStation)
-                    )
-                }
+            .map { journeys ->
+                journeys.map { journeyFromSearchResponse -> journeyFromSearchResponse(time, fromStation, toStation) }
             }
     }
 
@@ -84,8 +78,9 @@ class JourneyServiceImpl @Inject internal constructor(
         toStation: Station,
     ): Request {
         val localTime = ZonedDateTime.ofInstant(time, Wkd.TIMEZONE)
-        val timetableDate = Wkd.DATE_PATTERN.format(localTime)
-        val timetableTime = Wkd.TIME_PATTERN.format(localTime)
+        val timetableDate = SEARCH_DATE_PATTERN.format(localTime)
+        val timetableTime = SEARCH_TIME_PATTERN.format(localTime)
+
         val requestBody: RequestBody = FormBody.Builder(StandardCharsets.UTF_8)
             .addEncoded("timetable_date", timetableDate)
             .addEncoded("timetable_time", timetableTime)

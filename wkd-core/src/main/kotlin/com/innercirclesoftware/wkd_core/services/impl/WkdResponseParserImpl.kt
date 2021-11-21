@@ -1,133 +1,139 @@
 package com.innercirclesoftware.wkd_core.services.impl
 
-import arrow.core.Either
-import arrow.core.flatMap
-import arrow.core.traverseEither
-import com.innercirclesoftware.wkd_core.Wkd
+import arrow.core.*
+import com.innercirclesoftware.wkd_api.models.Journey
+import com.innercirclesoftware.wkd_api.models.JourneyStation
+import com.innercirclesoftware.wkd_core.Wkd.withLocalTime
 import com.innercirclesoftware.wkd_core.services.JourneyResponseParseError
+import com.innercirclesoftware.wkd_core.services.SearchResponseJourneyBuilder
 import com.innercirclesoftware.wkd_core.services.WkdResponseParser
 import com.innercirclesoftware.wkd_core.utils.requireElementsByClass
-import com.innercirclesoftware.wkd_core.utils.requireOwnText
 import com.innercirclesoftware.wkd_core.utils.requireSelect
 import jakarta.inject.Singleton
 import org.jsoup.nodes.Document
-import org.jsoup.select.Elements
-import java.time.Instant
-import java.time.ZonedDateTime
-import java.time.temporal.ChronoField
+import org.jsoup.nodes.Element
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
+
+/**
+ * Returns a function which can be invoked with the station names and time the search took place to build a Journey
+ */
+private val parsedSearchResponse: (
+    start: LocalTime,
+    end: LocalTime,
+    distanceMeters: Int,
+) -> SearchResponseJourneyBuilder = { start, end, distanceMeters ->
+    { searchTime, startStation, endStation ->
+        Journey(
+            start = JourneyStation(time = searchTime.withLocalTime(start), station = startStation),
+            end = JourneyStation(time = searchTime.withLocalTime(end), station = endStation),
+            distanceMeters = distanceMeters
+        )
+    }
+}
+
+private val TIME_PATTERN: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
 @Singleton
 class WkdResponseParserImpl : WkdResponseParser {
 
-    override fun parseJourneySearchResponse(
-        time: Instant,
-        document: Document
-    ): Either<JourneyResponseParseError, List<Pair<Instant, Instant>>> {
+    override fun parseJourneySearchResponse(document: Document): Either<JourneyResponseParseError, List<SearchResponseJourneyBuilder>> {
         return Either.catch { document.requireElementsByClass("train") }
             .mapLeft { throwable ->
                 when (throwable) {
                     is NullPointerException -> JourneyResponseParseError.MalformedDocument(""""train" class not found""")
                     else -> JourneyResponseParseError.Unknown(
-                        """Unknown error getting elements by class "train"""",
-                        throwable
+                        message = """Unknown error getting elements by class "train"""",
+                        cause = throwable
                     )
                 }
             }
-            .flatMap { trains: Elements ->
-                trains.traverseEither { trainElement ->
-                    Either.catch {
-                        trainElement.requireSelect(".train-time")
-                    }.mapLeft { throwable ->
-                        when (throwable) {
-                            is NullPointerException -> JourneyResponseParseError.MalformedDocument("""No elements for css selector ".train-time in $trainElement"""")
-                            else -> JourneyResponseParseError.Unknown(
-                                """Unknown error getting elements for css selector ".train-time" in $trainElement""",
-                                throwable
-                            )
-                        }
-                    }
-                }
-            }
-            .flatMap { trainTimes: List<Elements> ->
-                val (correctSize, incorrectSize) = trainTimes.partition { it.size == 2 }
-                if (incorrectSize.isNotEmpty()) {
-                    val msg = "Incorrect number of train times. correct=${correctSize.size}, incorrect=$incorrectSize"
-                    Either.Left(JourneyResponseParseError.MalformedDocument(msg))
-                } else {
-                    val timeElements = correctSize.map { times -> times[0] to times[1] }
-                    Either.Right(timeElements)
-                }
-            }
-            .flatMap { timeElements ->
-                timeElements.traverseEither { (startTimeElement, endTimeElement) ->
-                    Either.catch { startTimeElement.requireOwnText() }
-                        .flatMap { starTimeStr ->
-                            Either.catch { endTimeElement.requireOwnText() }
-                                .map { startTimeEnd -> starTimeStr to startTimeEnd }
-                        }
-                        .mapLeft { throwable ->
-                            when (throwable) {
-                                is NullPointerException -> JourneyResponseParseError.MalformedDocument("""No ownText (startTimeElement, endTimeElement)=($startTimeElement, $endTimeElement)"""")
-                                else -> JourneyResponseParseError.Unknown(
-                                    """Unknown error getting ownText for ownText (startTimeElement, endTimeElement)=($startTimeElement, $endTimeElement)""",
-                                    throwable
-                                )
-                            }
-                        }
-                        .flatMap { (startTimeStr, endTimeStr) ->
-                            parseTime(time = time, startTime = startTimeStr, endTime = endTimeStr)
-                        }
-                }
-            }
+            .flatMap { trains -> trains.traverseEither { train -> parseTrain(train) } }
     }
 
-    private fun parseTime(
-        time: Instant,
-        startTime: String,
-        endTime: String
-    ): Either<JourneyResponseParseError.IncorrectFormat, Pair<Instant, Instant>> {
+    private val parseTrain: (Element) -> Either<JourneyResponseParseError, SearchResponseJourneyBuilder> = { train ->
+        parseStartTime(train)
+            .zip(parseEndTime(train), parseDistanceMeters(train)) { start, end, distanceMeters ->
+                parsedSearchResponse(start, end, distanceMeters)
+            }
+    }
+    private val parseStartTime: (Element) -> Either<JourneyResponseParseError, LocalTime> =
+        { parseTimeForType(it, "Odjazd") }
+    private val parseEndTime: (Element) -> Either<JourneyResponseParseError, LocalTime> =
+        { parseTimeForType(it, "Przyjazd") }
 
-        fun <T> Either<Throwable, T>.mapLeftToElementParsingError(
-            valueDescription: String,
-            rawValue: String
-        ): Either<JourneyResponseParseError.IncorrectFormat, T> {
-            return mapLeft { throwable ->
-                JourneyResponseParseError.IncorrectFormat(
-                    value = rawValue,
-                    message = "Could not parse $valueDescription=$rawValue with format=${Wkd.TIME_PATTERN}",
+    private fun parseTimeForType(train: Element, type: String): Either<JourneyResponseParseError, LocalTime> = Either
+        .catch { train.requireSelect(".center") }
+        .mapLeft { throwable ->
+            when (throwable) {
+                is NullPointerException -> JourneyResponseParseError.MalformedDocument("""No elements for css selector ".center" for "$type" in $train""")
+                else -> JourneyResponseParseError.Unknown(
+                    message = """Unknown error for css selector ".center" for "$type" in $train""",
                     cause = throwable,
                 )
             }
         }
+        .flatMap { centerElements ->
+            centerElements.asSequence()
+                .flatMap { center ->
+                    val trainTime = center.getElementsByClass("train-time")
+                    val trainTimeType = center.getElementsByClass("train-time-type")
+                    if (type.equals(trainTimeType.text(), ignoreCase = true)) {
+                        sequenceOf(trainTime.text())
+                    } else {
+                        emptySequence()
+                    }
+                }
+                .firstOrNull()
+                .rightIfNotNull {
+                    JourneyResponseParseError.MalformedDocument("""Could not find time for type=$type in $train""")
+                }
+                .flatMap { trainTimeStr ->
+                    Either.catch { LocalTime.parse(trainTimeStr, TIME_PATTERN) }
+                        .mapLeft { throwable ->
+                            when (throwable) {
+                                is DateTimeParseException -> JourneyResponseParseError.IncorrectFormat(
+                                    value = trainTimeStr,
+                                    message = """Time="$trainTimeStr" does not match pattern="$TIME_PATTERN"""",
+                                    cause = throwable,
+                                )
+                                else -> JourneyResponseParseError.Unknown(
+                                    message = """Unknown error parsing time="$trainTimeStr" with pattern="$TIME_PATTERN"""",
+                                    cause = throwable,
+                                )
+                            }
+                        }
+                }
+        }
 
-        val startEither = Either.catch {
-            parseTimeRawValue(time, startTime)
-        }.mapLeftToElementParsingError("startTime", startTime)
-        val endEither = Either.catch {
-            parseTimeRawValue(time, endTime)
-        }.mapLeftToElementParsingError("endTime", endTime)
-
-        return startEither.flatMap { start -> endEither.map { end -> start to end } }
-    }
-
-    private fun parseTimeRawValue(
-        time: Instant,
-        timeStr: String,
-    ): Instant {
-        val temporalAccessor = Wkd.TIME_PATTERN.parse(timeStr)
-        return instantWithLocalTime(
-            time,
-            hour = temporalAccessor.get(ChronoField.HOUR_OF_DAY),
-            minute = temporalAccessor.get(ChronoField.MINUTE_OF_HOUR)
-        )
-    }
-
-    private fun instantWithLocalTime(time: Instant, hour: Int, minute: Int): Instant {
-        return ZonedDateTime.ofInstant(time, Wkd.TIMEZONE)
-            .withHour(hour)
-            .withMinute(minute)
-            .toInstant()
-    }
-
-
+    private fun parseDistanceMeters(train: Element): Either<JourneyResponseParseError, Int> = Either
+        .catch { train.requireSelect(".article-body") }
+        .mapLeft { throwable ->
+            when (throwable) {
+                is NullPointerException -> JourneyResponseParseError.MalformedDocument("""No elements for css selector ".article-body" for distance in $train""")
+                else -> JourneyResponseParseError.Unknown(
+                    """Unknown error for css selector ".article-body" for distance in $train""",
+                    throwable
+                )
+            }
+        }
+        .flatMap { articleBodies ->
+            articleBodies.getOrNull(0)
+                .rightIfNotNull { JourneyResponseParseError.MalformedDocument("""Expected single match for ".article-body" for distance in $train""") }
+        }
+        .map { articleBody -> articleBody.children() }
+        .flatMap { child ->
+            child
+                .asSequence()
+                .map { it.text() }
+                .mapNotNull { text -> """(\d+) km""".toRegex().matchEntire(text) }
+                .flatMap { it.groupValues.drop(1) }
+                .map { it.toDouble() }
+                .firstOrNull()
+                .rightIfNotNull {
+                    JourneyResponseParseError.MalformedDocument("""Could not find matching distance for for $train""")
+                }
+        }
+        .map { km -> (km * 1000).toInt() }
 }

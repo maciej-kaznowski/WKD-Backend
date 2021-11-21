@@ -14,7 +14,7 @@ class WkdObjectMapperFactory : ObjectMapperFactory() {
 
     override fun objectMapper(jacksonConfiguration: JacksonConfiguration?, jsonFactory: JsonFactory?): ObjectMapper {
         return super.objectMapper(jacksonConfiguration, jsonFactory).apply {
-            configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
+            configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
         }
     }
 }

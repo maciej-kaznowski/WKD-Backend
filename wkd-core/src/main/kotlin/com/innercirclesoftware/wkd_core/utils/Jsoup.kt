@@ -23,8 +23,3 @@ internal fun Element.requireElementsByClass(className: String): Elements {
 internal fun Element.requireSelect(cssQuery: String): Elements {
     return requireNotNull(select(cssQuery)) { "Null elements for cssQuery=$cssQuery" }
 }
-
-internal fun Element.requireOwnText(): String {
-    return requireNotNull(ownText()) { "Null ownText" }
-}
-

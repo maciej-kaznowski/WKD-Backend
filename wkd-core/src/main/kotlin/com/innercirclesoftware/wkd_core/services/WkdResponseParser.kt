@@ -1,15 +1,16 @@
 package com.innercirclesoftware.wkd_core.services
 
 import arrow.core.Either
+import com.innercirclesoftware.wkd_api.models.Journey
+import com.innercirclesoftware.wkd_api.models.Station
 import org.jsoup.nodes.Document
 import java.time.Instant
 
+typealias SearchResponseJourneyBuilder = (searchTime: Instant, startStation: Station, endStation: Station) -> Journey
+
 interface WkdResponseParser {
 
-    fun parseJourneySearchResponse(
-        time: Instant,
-        document: Document
-    ): Either<JourneyResponseParseError, List<Pair<Instant, Instant>>>
+    fun parseJourneySearchResponse(document: Document): Either<JourneyResponseParseError, List<SearchResponseJourneyBuilder>>
 
 }
 
