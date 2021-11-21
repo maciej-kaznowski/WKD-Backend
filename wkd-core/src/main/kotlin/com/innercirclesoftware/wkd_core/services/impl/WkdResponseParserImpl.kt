@@ -157,7 +157,7 @@ class WkdResponseParserImpl : WkdResponseParser {
         }
         .flatMap { trainCourseInfo ->
             trainCourseInfo.getOrNull(0)
-                .rightIfNotNull { JourneyResponseParseError.MalformedDocument("""Expected single match for ".article-body" for distance in $train""") }
+                .rightIfNotNull { JourneyResponseParseError.MalformedDocument("""Expected single match for ".train-course-info" for distance in $train""") }
         }
         .map { articleBody -> articleBody.children() }
         .flatMap { child ->
