@@ -1,6 +1,12 @@
-package com.innercirclesoftware.wkd_core.models
+package com.innercirclesoftware.wkd_api.models
 
-enum class JourneyOperation {
+enum class JourneyOperationMode {
+
+    /**
+     * Always operating, even on holidays.
+     */
+    ALWAYS,
+
     /**
      * Trains operating Monday - Friday
      *
