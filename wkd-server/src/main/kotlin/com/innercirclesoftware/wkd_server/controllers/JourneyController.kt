@@ -1,6 +1,7 @@
 package com.innercirclesoftware.wkd_server.controllers
 
 import com.innercirclesoftware.wkd_api.models.Journey
+import com.innercirclesoftware.wkd_api.models.Station
 import com.innercirclesoftware.wkd_core.services.JourneyService
 import com.innercirclesoftware.wkd_core.services.WkdScrapeError
 import io.micronaut.http.MediaType
@@ -17,13 +18,13 @@ class JourneyController @Inject constructor(
 
     @Get("/search")
     fun search(
-        @QueryValue("fromStationId") fromStationId: Long,
-        @QueryValue("toStationId") toStationId: Long,
+        @QueryValue("fromStation") fromStation: Station,
+        @QueryValue("toStation") toStation: Station,
         @QueryValue("time") time: Instant?,
     ): List<Journey> = journeyService.searchJourneys(
         time = time ?: Instant.now(),
-        fromStationId = fromStationId,
-        toStationId = toStationId,
+        fromStation = fromStation,
+        toStation = toStation
     ).fold(
         ifLeft = { error: WkdScrapeError -> throw IllegalStateException("Error parsing response: $error") },
         ifRight = { it }

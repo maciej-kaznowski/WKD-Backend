@@ -6,7 +6,9 @@ import arrow.core.flatMap
 import arrow.core.rightIfNotNull
 import com.innercirclesoftware.wkd_api.models.Journey
 import com.innercirclesoftware.wkd_api.models.JourneyStation
+import com.innercirclesoftware.wkd_api.models.Station
 import com.innercirclesoftware.wkd_core.Wkd
+import com.innercirclesoftware.wkd_core.models.stationId
 import com.innercirclesoftware.wkd_core.services.JourneyService
 import com.innercirclesoftware.wkd_core.services.WkdResponseParser
 import com.innercirclesoftware.wkd_core.services.WkdScrapeError
@@ -27,10 +29,10 @@ class JourneyServiceImpl @Inject internal constructor(
 
     override fun searchJourneys(
         time: Instant,
-        fromStationId: Long,
-        toStationId: Long,
+        fromStation: Station,
+        toStation: Station,
     ): Either<WkdScrapeError, List<Journey>> {
-        val request = buildSearchRequest(time = time, fromStationId = fromStationId, toStationId = toStationId)
+        val request = buildSearchRequest(time = time, fromStation = fromStation, toStation = toStation)
 
         return Either
             .Right(okHttpClient.newCall(request))
@@ -62,30 +64,24 @@ class JourneyServiceImpl @Inject internal constructor(
                     .parseJourneySearchResponse(time, document)
                     .mapLeft { journeyResponseParseError ->
                         WkdScrapeError.ResponseParseError(
-                            message = "Error parsing document response for time=$time, fromStationId=$fromStationId, toStationId=$toStationId: error=$journeyResponseParseError",
+                            message = "Error parsing document response for time=$time, fromStation=$fromStation, toStation=$toStation: error=$journeyResponseParseError",
                         )
                     }
             }
             .map { journeyTimes ->
                 journeyTimes.map { (startTime, endTime) ->
-                    val startStation = JourneyStation(
-                        time = startTime,
-                        stationId = fromStationId,
+                    Journey(
+                        start = JourneyStation(time = startTime, station = fromStation),
+                        end = JourneyStation(time = endTime, station = toStation)
                     )
-                    val endStation = JourneyStation(
-                        time = endTime,
-                        stationId = toStationId,
-                    )
-
-                    Journey(start = startStation, end = endStation)
                 }
             }
     }
 
     private fun buildSearchRequest(
         time: Instant,
-        fromStationId: Long,
-        toStationId: Long
+        fromStation: Station,
+        toStation: Station,
     ): Request {
         val localTime = ZonedDateTime.ofInstant(time, Wkd.TIMEZONE)
         val timetableDate = Wkd.DATE_PATTERN.format(localTime)
@@ -93,8 +89,8 @@ class JourneyServiceImpl @Inject internal constructor(
         val requestBody: RequestBody = FormBody.Builder(StandardCharsets.UTF_8)
             .addEncoded("timetable_date", timetableDate)
             .addEncoded("timetable_time", timetableTime)
-            .addEncoded("timetable_from", fromStationId.toString())
-            .addEncoded("timetable_to", toStationId.toString())
+            .addEncoded("timetable_from", fromStation.stationId.id.toString())
+            .addEncoded("timetable_to", toStation.stationId.id.toString())
             .addEncoded("search", "1")
             .build()
 

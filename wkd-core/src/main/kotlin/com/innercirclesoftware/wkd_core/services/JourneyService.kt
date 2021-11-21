@@ -2,14 +2,15 @@ package com.innercirclesoftware.wkd_core.services
 
 import arrow.core.Either
 import com.innercirclesoftware.wkd_api.models.Journey
+import com.innercirclesoftware.wkd_api.models.Station
 import java.time.Instant
 
 interface JourneyService {
 
     fun searchJourneys(
         time: Instant,
-        fromStationId: Long,
-        toStationId: Long
+        fromStation: Station,
+        toStation: Station,
     ): Either<WkdScrapeError, List<Journey>>
 
 }
