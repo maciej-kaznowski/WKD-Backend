@@ -16,6 +16,13 @@ class JourneyController @Inject constructor(
     private val journeyService: JourneyService
 ) {
 
+    /**
+     * Search for journeys.
+     *
+     * @param fromStation The station we are travelling from
+     * @param toStation The station we are travelling to
+     * @param time The optional time we wish to depart after. Defaults to now.
+     */
     @Get("/search")
     fun search(
         @QueryValue("fromStation") fromStation: Station,

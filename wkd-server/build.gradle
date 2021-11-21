@@ -17,6 +17,12 @@ micronaut {
     }
 }
 
+kapt {
+    arguments {
+        arg("micronaut.openapi.views.spec", "redoc.enabled=false,rapidoc.enabled=false,swagger-ui.enabled=true,swagger-ui.theme=flattop")
+    }
+}
+
 dependencies {
     implementation(project(":wkd-api"))
     implementation(project(":wkd-core"))
@@ -32,11 +38,14 @@ dependencies {
     implementation("io.micronaut:micronaut-validation")
     runtimeOnly("com.fasterxml.jackson.module:jackson-module-kotlin")
     testImplementation("org.jsoup:jsoup:1.14.3")
+
+    implementation("io.swagger.core.v3:swagger-annotations")
+    kapt("io.micronaut.openapi:micronaut-openapi:3.2.0")
 }
 
 
 application {
-    mainClass.set("com.innercirclesoftware.wkd_server.ApplicationKt")
+    mainClass.set("com.innercirclesoftware.wkd_server.Application")
 }
 java {
     sourceCompatibility = JavaVersion.toVersion("11")
@@ -53,6 +62,4 @@ tasks {
             jvmTarget = "11"
         }
     }
-
-
 }
