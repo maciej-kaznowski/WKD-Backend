@@ -4,7 +4,7 @@ import java.time.Instant
 import java.time.LocalTime
 import java.time.ZoneId
 
-internal object Wkd {
+object Wkd {
 
     val TIMEZONE: ZoneId = ZoneId.of("Europe/Warsaw")
 

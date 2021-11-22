@@ -26,7 +26,10 @@ object Application {
         build()
             .args(*args)
             .packages("com.innercirclesoftware")
+            .eagerInitAnnotated(EagerInit::class.java)
             .start()
     }
 }
 
+@Retention(AnnotationRetention.RUNTIME)
+annotation class EagerInit
