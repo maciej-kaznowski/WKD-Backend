@@ -7,10 +7,9 @@
 ./gradlew clean
 
 # Build (if required) and publish
-./gradlew :wkd-api:publishToMavenLocal
-./gradlew :wkd-client:publishToMavenLocal
+./gradlew publishToMavenLocal
 
-# Verify it exists in maven local
+# Verify the artifacts exist in maven local
 ls ~/.m2/repository/com/innercirclesoftware/wkd/
 ```
 
