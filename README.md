@@ -1,15 +1,16 @@
-## Micronaut 3.1.4 Documentation
+# Publishing to maven local
+`:wkd-api` can be published to maven local by running:
+```shell
+# Optionally clean the build
+./gradlew :wkd-api:clean
 
-- [User Guide](https://docs.micronaut.io/3.1.4/guide/index.html)
-- [API Reference](https://docs.micronaut.io/3.1.4/api/index.html)
-- [Configuration Reference](https://docs.micronaut.io/3.1.4/guide/configurationreference.html)
-- [Micronaut Guides](https://guides.micronaut.io/index.html)
+# Build (if required) and publish
+./gradlew :wkd-api:publishToMavenLocal
 
----
+#Verify it exists in maven local
+ls ~/.m2/repository/com/innercirclesoftware/wkd/wkd-api
+```
 
-## Feature http-client documentation
-
-- [Micronaut HTTP Client documentation](https://docs.micronaut.io/latest/guide/index.html#httpClient)
 
 ## OpenAPI/Swagger
 

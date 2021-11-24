@@ -1,6 +1,19 @@
 plugins {
+    id("java-library")
     id("org.jetbrains.kotlin.jvm") version "1.5.21"
     id("org.jetbrains.kotlin.kapt") version "1.5.21"
+    id('maven-publish')
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = 'com.innercirclesoftware.wkd'
+            artifactId = 'wkd-api'
+            version = '1.0'
+            from components.java
+        }
+    }
 }
 
 def kotlinVersion = project.properties.get("kotlinVersion")
