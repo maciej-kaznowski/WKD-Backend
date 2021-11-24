@@ -2,6 +2,7 @@ package com.innercirclesoftware.wkd_server.controllers
 
 import com.innercirclesoftware.wkd_api.models.Journey
 import com.innercirclesoftware.wkd_api.models.Station
+import com.innercirclesoftware.wkd_api.services.WkdJourneyService
 import com.innercirclesoftware.wkd_core.services.JourneyService
 import com.innercirclesoftware.wkd_core.services.WkdScrapeError
 import io.micronaut.http.MediaType
@@ -14,17 +15,10 @@ import java.time.Instant
 @Controller("/journeys", produces = [MediaType.APPLICATION_JSON], consumes = [MediaType.APPLICATION_JSON])
 class JourneyController @Inject constructor(
     private val journeyService: JourneyService
-) {
+) : WkdJourneyService {
 
-    /**
-     * Search for journeys.
-     *
-     * @param fromStation The station we are travelling from
-     * @param toStation The station we are travelling to
-     * @param time The optional time we wish to depart after. Defaults to now.
-     */
     @Get("/search")
-    fun search(
+    override fun search(
         @QueryValue("fromStation") fromStation: Station,
         @QueryValue("toStation") toStation: Station,
         @QueryValue("time") time: Instant?,

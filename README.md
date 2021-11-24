@@ -1,16 +1,18 @@
 ## Publishing to maven local
-`:wkd-api` can be published to maven local by running:
+
+`:wkd-api` and `:wkd-client` can be published to maven local by running:
+
 ```shell
 # Optionally clean the build
-./gradlew :wkd-api:clean
+./gradlew clean
 
 # Build (if required) and publish
 ./gradlew :wkd-api:publishToMavenLocal
+./gradlew :wkd-client:publishToMavenLocal
 
 # Verify it exists in maven local
-ls ~/.m2/repository/com/innercirclesoftware/wkd/wkd-api
+ls ~/.m2/repository/com/innercirclesoftware/wkd/
 ```
-
 
 ## OpenAPI/Swagger
 
