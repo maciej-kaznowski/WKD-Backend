@@ -1,0 +1,49 @@
+plugins {
+    id("java-library")
+    id("org.jetbrains.kotlin.jvm") version "1.5.21"
+    id("org.jetbrains.kotlin.kapt") version "1.5.21"
+    id('maven-publish')
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = 'com.innercirclesoftware.wkd'
+            artifactId = 'wkd-client'
+            version = '1.0'
+            from components.java
+        }
+    }
+}
+
+def kotlinVersion = project.properties.get("kotlinVersion")
+
+dependencies {
+    api(project(":wkd-api"))
+
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:${kotlinVersion}"
+    implementation 'com.squareup.retrofit2:retrofit:2.9.0'
+    implementation "com.squareup.retrofit2:converter-moshi:2.9.0"
+
+    def moshiVer = "1.12.0"
+    implementation "com.squareup.moshi:moshi:$moshiVer"
+    implementation "com.squareup.moshi:moshi-adapters:$moshiVer"
+    kapt "com.squareup.moshi:moshi-kotlin-codegen:$moshiVer"
+}
+
+java {
+    sourceCompatibility = JavaVersion.toVersion("11")
+}
+
+tasks {
+    compileKotlin {
+        kotlinOptions {
+            jvmTarget = "11"
+        }
+    }
+    compileTestKotlin {
+        kotlinOptions {
+            jvmTarget = "11"
+        }
+    }
+}
