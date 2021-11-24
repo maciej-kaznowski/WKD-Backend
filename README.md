@@ -1,4 +1,4 @@
-# Publishing to maven local
+## Publishing to maven local
 `:wkd-api` can be published to maven local by running:
 ```shell
 # Optionally clean the build
@@ -7,7 +7,7 @@
 # Build (if required) and publish
 ./gradlew :wkd-api:publishToMavenLocal
 
-#Verify it exists in maven local
+# Verify it exists in maven local
 ls ~/.m2/repository/com/innercirclesoftware/wkd/wkd-api
 ```
 
