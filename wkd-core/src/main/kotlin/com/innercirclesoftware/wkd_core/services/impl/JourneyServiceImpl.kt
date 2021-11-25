@@ -20,7 +20,7 @@ import java.time.Instant
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
-private val SEARCH_TIME_PATTERN: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+private val SEARCH_TIME_PATTERN: DateTimeFormatter = DateTimeFormatter.ofPattern("HH'+':'+'mm")
 private val SEARCH_DATE_PATTERN: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE
 
 @Singleton
