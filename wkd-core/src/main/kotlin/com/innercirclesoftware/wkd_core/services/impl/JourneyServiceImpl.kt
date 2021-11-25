@@ -69,6 +69,8 @@ class JourneyServiceImpl @Inject internal constructor(
             }
             .map { journeys ->
                 journeys.map { journeyFromSearchResponse -> journeyFromSearchResponse(time, fromStation, toStation) }
+                    .filter { it.start.time >= time }
+                    .sortedBy { it.start.time }
             }
     }
 
