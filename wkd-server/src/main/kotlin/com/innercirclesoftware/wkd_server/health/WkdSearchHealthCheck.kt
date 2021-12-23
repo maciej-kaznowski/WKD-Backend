@@ -12,8 +12,8 @@ import io.micronaut.management.endpoint.info.InfoEndpoint
 import io.micronaut.management.health.indicator.AbstractHealthIndicator
 import io.micronaut.runtime.context.scope.Refreshable
 import jakarta.inject.Inject
-import java.time.Instant
-import java.time.LocalDateTime
+import java.time.LocalDate
+import java.time.LocalTime
 
 @Context
 @Refreshable
@@ -22,12 +22,16 @@ class WkdSearchHealthCheck @Inject constructor(
     private val journeyService: JourneyService
 ) : AbstractHealthIndicator<List<Journey>>() {
 
-    private val time: Instant = LocalDateTime.of(2021, 11, 22, 9, 0).atZone(Wkd.TIMEZONE).toInstant()
+    private val time: LocalTime = LocalTime.of(9, 0)
     private val from: Station = Station.GRODZISK_MAZ_RADONSKA
     private val to: Station = Station.WARSZAWA_SRODMIESCIE_WKD
 
     override fun getHealthInformation(): List<Journey> {
-        return journeyService.searchJourneys(time, from, to)
+        val journeyTime = LocalDate.now(Wkd.TIMEZONE)
+            .atTime(time)
+            .atZone(Wkd.TIMEZONE)
+            .toInstant()
+        return journeyService.searchJourneys(journeyTime, from, to)
             .mapLeft { error -> "Failed to search journeys: $error" }
             .filterOrElse({ journeys -> journeys.isNotEmpty() }) { "No journeys returned" }
             .getOrHandle { error -> throw IllegalStateException(error) }
