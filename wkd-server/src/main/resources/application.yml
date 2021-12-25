@@ -1,6 +1,8 @@
 micronaut:
   application:
     name: wkdBackend
+    server:
+      port: 8080
   router:
     static-resources:
       swagger:
@@ -18,3 +20,7 @@ micronaut:
       enabled: true
       sensitive: false
       details-visible: ANONYMOUS
+  server:
+    netty:
+      access-logger:
+        enabled: true
