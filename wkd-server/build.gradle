@@ -1,7 +1,7 @@
 plugins {
-    id("org.jetbrains.kotlin.jvm") version "1.5.21"
-    id("org.jetbrains.kotlin.kapt") version "1.5.21"
-    id("org.jetbrains.kotlin.plugin.allopen") version "1.5.21"
+    id("org.jetbrains.kotlin.jvm") version "1.6.20"
+    id("org.jetbrains.kotlin.kapt") version "1.6.20"
+    id("org.jetbrains.kotlin.plugin.allopen") version "1.6.20"
     id("com.github.johnrengelman.shadow") version "7.1.0"
     id("io.micronaut.application") version "2.0.8"
 }
@@ -38,6 +38,8 @@ dependencies {
     implementation("io.micronaut:micronaut-validation")
     runtimeOnly("com.fasterxml.jackson.module:jackson-module-kotlin")
     testImplementation("org.jsoup:jsoup:1.14.3")
+    implementation(platform("com.squareup.okhttp3:okhttp-bom:4.9.2"))
+    implementation("com.squareup.okhttp3:okhttp")
 
     implementation("io.swagger.core.v3:swagger-annotations")
     kapt("io.micronaut.openapi:micronaut-openapi:3.2.0")
