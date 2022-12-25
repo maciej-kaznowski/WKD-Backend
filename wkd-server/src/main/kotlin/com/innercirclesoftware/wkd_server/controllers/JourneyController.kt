@@ -3,6 +3,7 @@ package com.innercirclesoftware.wkd_server.controllers
 import com.innercirclesoftware.wkd_api.models.Journey
 import com.innercirclesoftware.wkd_api.models.Station
 import com.innercirclesoftware.wkd_api.services.WkdJourneyService
+import com.innercirclesoftware.wkd_core.health.HealthReportingService
 import com.innercirclesoftware.wkd_core.services.JourneyService
 import com.innercirclesoftware.wkd_core.services.WkdScrapeError
 import com.innercirclesoftware.wkd_core.services.impl.JourneyServiceImpl
@@ -18,7 +19,8 @@ import kotlin.time.measureTimedValue
 
 @Controller("/journeys", produces = [MediaType.APPLICATION_JSON], consumes = [MediaType.APPLICATION_JSON])
 class JourneyController @Inject constructor(
-    private val journeyService: JourneyService
+    private val journeyService: JourneyService,
+    private val healthReportingService: HealthReportingService,
 ) : WkdJourneyService {
 
     private val logger = LoggerFactory.getLogger(JourneyServiceImpl::class.java)
@@ -38,16 +40,19 @@ class JourneyController @Inject constructor(
                 toStation = toStation
             )
         }.let { (result, duration) ->
-            result.fold(
-                ifLeft = { error: WkdScrapeError ->
-                    logger.warn("Scrape error for from=$fromStation, to=$toStation, time=$time, error=$error, duration=$duration")
-                    throw IllegalStateException("Error parsing response: $error")
-                },
-                ifRight = {
-                    logger.info("Journeys searched from=$fromStation to=$toStation at time=$time in $duration")
-                    it
-                }
-            )
+            result
+                .tap { healthReportingService.reportSearchEndpointHit() }
+                .tapLeft { healthReportingService.reportSearchEndpointHit(success = false) }
+                .fold(
+                    ifLeft = { error: WkdScrapeError ->
+                        logger.warn("Scrape error for from=$fromStation, to=$toStation, time=$time, error=$error, duration=$duration")
+                        throw IllegalStateException("Error parsing response: $error")
+                    },
+                    ifRight = {
+                        logger.info("Journeys searched from=$fromStation to=$toStation at time=$time in $duration")
+                        it
+                    }
+                )
         }
     }
 }

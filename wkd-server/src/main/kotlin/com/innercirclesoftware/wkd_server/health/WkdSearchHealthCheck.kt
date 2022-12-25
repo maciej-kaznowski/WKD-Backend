@@ -5,6 +5,7 @@ import arrow.core.getOrHandle
 import com.innercirclesoftware.wkd_api.models.Journey
 import com.innercirclesoftware.wkd_api.models.Station
 import com.innercirclesoftware.wkd_core.Wkd
+import com.innercirclesoftware.wkd_core.health.HealthReportingService
 import com.innercirclesoftware.wkd_core.services.JourneyService
 import io.micronaut.context.annotation.Context
 import io.micronaut.context.annotation.Requires
@@ -19,7 +20,8 @@ import java.time.LocalTime
 @Refreshable
 @Requires(beans = [InfoEndpoint::class])
 class WkdSearchHealthCheck @Inject constructor(
-    private val journeyService: JourneyService
+    private val journeyService: JourneyService,
+    private val healthReportingService: HealthReportingService,
 ) : AbstractHealthIndicator<List<Journey>>() {
 
     private val time: LocalTime = LocalTime.of(9, 0)
@@ -34,6 +36,8 @@ class WkdSearchHealthCheck @Inject constructor(
         return journeyService.searchJourneys(journeyTime, from, to)
             .mapLeft { error -> "Failed to search journeys: $error" }
             .filterOrElse({ journeys -> journeys.isNotEmpty() }) { "No journeys returned" }
+            .tap { healthReportingService.reportInternalCheck() }
+            .tapLeft { healthReportingService.reportInternalCheck(success = false) }
             .getOrHandle { error -> throw IllegalStateException(error) }
     }
 

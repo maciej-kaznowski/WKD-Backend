@@ -24,3 +24,6 @@ micronaut:
     netty:
       access-logger:
         enabled: true
+healthchecksio:
+  # A ping key generated in https://healthchecks.io/
+  pingkey:
